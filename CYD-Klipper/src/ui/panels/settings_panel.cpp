@@ -9,10 +9,21 @@
 #include "../ota_setup.h"
 #include "../nav_buttons.h"
 #include "../../core/printer_integration.hpp"
+#include "../../core/battery_monitor.hpp"
 
 #ifndef REPO_VERSION
     #define REPO_VERSION "Unknown"
 #endif // REPO_VERSION
+
+#ifdef BOARD_HAS_IP5306
+static void update_settings_battery_label(lv_event_t * e) {
+    lv_obj_t * label = lv_event_get_target(e);
+    const uint8_t *pct_ptr = (const uint8_t *)lv_msg_get_payload(lv_event_get_msg(e));
+    uint8_t pct = pct_ptr ? *pct_ptr : 100;
+    
+    lv_label_set_text_fmt(label, "%d%%  ", pct);
+}
+#endif
 
 static void invert_color_switch(lv_event_t * e){
     bool checked = lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED);
@@ -274,6 +285,20 @@ void settings_section_device(lv_obj_t* panel)
 
     lv_create_custom_menu_switch("Auto Update", panel, auto_ota_update_switch, global_config.auto_ota_update);
     lv_create_custom_menu_label("Version", panel, REPO_VERSION "  ");
+
+#ifdef BOARD_HAS_IP5306
+    if (is_battery_monitor_available()) {
+        lv_obj_t * b_label = lv_label_create(lv_scr_act());
+        lv_label_set_text_fmt(b_label, "%d%%  ", get_battery_percent());
+        
+        lv_obj_add_event_cb(b_label, update_settings_battery_label, LV_EVENT_MSG_RECEIVED, NULL);
+        lv_msg_subsribe_obj(DATA_BATTERY, b_label, NULL);
+        
+        lv_create_custom_menu_entry("Battery Status", b_label, panel, false);
+    } else {
+        lv_create_custom_menu_label("Battery Status", panel, "Unavailable (No I2C PMIC)  ");
+    }
+#endif
 
     if (ota_has_update()){
         lv_obj_t *btn = lv_btn_create(panel);

@@ -5,9 +5,62 @@
 #include <stdio.h>
 #include "../conf/global_config.h"
 #include "../core/printer_integration.hpp"
+#include "../core/battery_monitor.hpp"
 
 static lv_style_t nav_button_style;
 static lv_style_t nav_button_text_style;
+
+static void update_battery_widget(lv_event_t * e) {
+    lv_obj_t * label_icon = (lv_obj_t *)lv_event_get_user_data(e);
+    lv_obj_t * label_text = lv_event_get_target(e);
+    
+    const uint8_t *pct_ptr = (const uint8_t *)lv_msg_get_payload(lv_event_get_msg(e));
+    uint8_t pct = pct_ptr ? *pct_ptr : 100;
+    
+    char pct_str[10];
+    sprintf(pct_str, "%d%%", pct);
+    lv_label_set_text(label_text, pct_str);
+    
+    if (pct >= 75) {
+        lv_label_set_text(label_icon, LV_SYMBOL_BATTERY_FULL);
+        lv_obj_set_style_text_color(label_icon, lv_palette_main(LV_PALETTE_GREEN), 0);
+    } else if (pct >= 50) {
+        lv_label_set_text(label_icon, LV_SYMBOL_BATTERY_3);
+        lv_obj_set_style_text_color(label_icon, lv_palette_main(LV_PALETTE_GREEN), 0);
+    } else if (pct >= 25) {
+        lv_label_set_text(label_icon, LV_SYMBOL_BATTERY_2);
+        lv_obj_set_style_text_color(label_icon, lv_palette_main(LV_PALETTE_ORANGE), 0);
+    } else {
+        lv_label_set_text(label_icon, LV_SYMBOL_BATTERY_EMPTY);
+        lv_obj_set_style_text_color(label_icon, lv_palette_main(LV_PALETTE_RED), 0);
+    }
+}
+
+static void create_battery_widget(lv_obj_t * root) {
+    lv_obj_t* container = lv_obj_create(root);
+    lv_obj_set_flex_grow(container, 1);
+#ifdef CYD_SCREEN_VERTICAL
+    lv_obj_set_height(container, CYD_SCREEN_SIDEBAR_SIZE_PX);
+#else
+    lv_obj_set_width(container, CYD_SCREEN_SIDEBAR_SIZE_PX);
+#endif
+    
+    // Make container style flat and borderless
+    lv_obj_remove_style_all(container);
+    
+    lv_obj_t* icon = lv_label_create(container);
+    lv_label_set_text(icon, LV_SYMBOL_BATTERY_FULL);
+    lv_obj_align(icon, LV_ALIGN_CENTER, 0, -1 * CYD_SCREEN_GAP_PX);
+    
+    lv_obj_t* text = lv_label_create(container);
+    lv_label_set_text(text, "--%");
+    lv_obj_align(text, LV_ALIGN_CENTER, 0, CYD_SCREEN_GAP_PX);
+    lv_obj_add_style(text, &nav_button_text_style, 0);
+    
+    // Subscribe target text to battery update message
+    lv_obj_add_event_cb(text, update_battery_widget, LV_EVENT_MSG_RECEIVED, icon);
+    lv_msg_subsribe_obj(DATA_BATTERY, text, icon);
+}
 
 static void update_printer_data_z_pos(lv_event_t * e) {
     lv_obj_t * label = lv_event_get_target(e);
@@ -155,6 +208,12 @@ void nav_buttons_setup(PANEL_TYPE active_panel){
     lv_obj_align(root_panel, LV_ALIGN_TOP_LEFT, 0, 0);
     lv_layout_flex_column(root_panel, LV_FLEX_ALIGN_START, 0, 0);
 
+#endif
+
+#ifdef BOARD_HAS_IP5306
+    if (is_battery_monitor_available()) {
+        create_battery_widget(root_panel);
+    }
 #endif
 
     if (get_current_printer_data()->state > PrinterState::PrinterStateError){

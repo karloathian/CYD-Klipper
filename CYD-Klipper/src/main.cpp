@@ -10,6 +10,8 @@
 #include <Esp.h>
 #include "core/lv_setup.h"
 #include "ui/ota_setup.h"
+#include "core/led_status.hpp"
+#include "core/battery_monitor.hpp"
 
 void setup() {
     Serial.begin(115200);
@@ -23,9 +25,11 @@ void setup() {
     ota_init();
     ip_init();
     data_setup();
+    battery_monitor_init();
 
     nav_style_setup();
     main_ui_setup();
+    led_status_init();
 }
 
 void loop(){

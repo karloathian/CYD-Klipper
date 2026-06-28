@@ -189,6 +189,7 @@ class BasePrinter
 #define DATA_PRINTER_TEMP_PRESET 3
 #define DATA_PRINTER_MINIMAL 4
 #define DATA_PRINTER_POPUP 5
+#define DATA_BATTERY 6
 
 BasePrinter* get_current_printer();
 BasePrinter* get_printer(int idx);

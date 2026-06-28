@@ -118,7 +118,7 @@ void screen_setup()
     ledcAttachPin(TFT_BL, 0);
     tft.fillScreen(TFT_BLACK);
     set_invert_display();
-    LED_init();
+    // LED_init(); // Managed globally by led_status
 
     lv_disp_draw_buf_init(&draw_buf, buf, NULL, TFT_WIDTH * TFT_HEIGHT / 10);
     static lv_disp_drv_t disp_drv;
